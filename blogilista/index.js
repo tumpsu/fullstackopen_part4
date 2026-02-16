@@ -19,7 +19,7 @@ mongoose.connect(mongoUrl, { family: 4 });
 
 app.use(express.json());
 
-app.get('/api/blogs', (request, response) => 
+app.get('/api/blogs', (request, response) => {
   Blog.find({}).then((blogs) => {
     response.json(blogs);
   });
