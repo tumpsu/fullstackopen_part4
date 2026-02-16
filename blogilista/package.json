@@ -1,0 +1,22 @@
+{
+  "name": "blogilista",
+  "version": "0.0.1",
+  "description": "Node.js bavkend blocklisting management for Rest API",
+  "keywords": [
+    "node.js",
+    "restAPI"
+  ],
+  "license": "UNLICENSED",
+  "author": "Tuomas Keskitalo",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "mongoose": "^9.2.1"
+  }
+}
