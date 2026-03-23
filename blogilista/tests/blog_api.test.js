@@ -81,6 +81,32 @@ describe('POST /api/blogs', () => {
     const titles = response.body.map(b => b.title);
     assert.ok(titles.includes('New blog'));
   });
+
+  test('blog without title is not added', async () => {
+    const newBlog = {
+      author: 'Author',
+      url: 'http://example.com',
+      likes: 5
+    };
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400);
+  });
+
+  test('blog without url is not added', async () => {
+    const newBlog = {
+      title: 'Missing URL',
+      author: 'Author',
+      likes: 5
+    };
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400);
+  });
 });
 
 test('if likes is missing, it defaults to 0', async () => {
@@ -98,7 +124,6 @@ test('if likes is missing, it defaults to 0', async () => {
 
   assert.strictEqual(response.body.likes, 0);
 });
-
 
 after(async () => {
   await mongoose.connection.close();
