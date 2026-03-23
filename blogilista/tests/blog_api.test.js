@@ -152,6 +152,37 @@ describe('DELETE /api/blogs/:id', () => {
   });
 });
 
+
+describe('PUT /api/blogs/:id', () => {
+  let blogId;
+
+  beforeEach(async () => {
+    await Blog.deleteMany({});
+
+    const blog = new Blog({
+      title: 'Blog to update',
+      author: 'Tester',
+      url: 'http://example.com',
+      likes: 1
+    });
+
+    const saved = await blog.save();
+    blogId = saved.id;
+  });
+
+  test('a blog\'s likes can be updated', async () => {
+    const updatedData = { likes: 10 };
+
+    const response = await api
+      .put(`/api/blogs/${blogId}`)
+      .send(updatedData)
+      .expect(200)
+      .expect('Content-Type', /application\/json/);
+
+    assert.strictEqual(response.body.likes, 10);
+  });
+});
+
 after(async () => {
   await mongoose.connection.close();
 });
