@@ -31,12 +31,20 @@ describe('GET /api/blogs', () => {
       .get('/api/blogs')
       .expect(200)
       .expect('Content-Type', /application\/json/);
-  })
+  });
 
   test('returns the correct number of blogs', async () => {
     const response = await api.get('/api/blogs');
     assert.strictEqual(response.body.length, 1);
   });
+});
+
+test('unique identifier property is named id', async () => {
+  const response = await api.get('/api/blogs');
+  const blog = response.body[0];
+
+  assert.ok(blog.id);
+  assert.strictEqual(blog._id, undefined);
 });
 
 after(async () => {
