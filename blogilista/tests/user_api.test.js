@@ -44,6 +44,60 @@ describe('creating a new user', () => {
     const usernames = users.body.map(u => u.username);
     assert.ok(usernames.includes('tuomas'));
   });
+
+  test('creation fails if username is too short', async () => {
+    const newUser = {
+      username: 'ab',
+      name: 'Short User',
+      password: 'validpass'
+    };
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(400);
+
+    assert.match(result.body.error, /username.*minimum/i);
+
+    const usersAtEnd = await api.get('/api/users');
+    assert.strictEqual(usersAtEnd.body.length, 1);
+  });
+
+  test('creation fails if password is too short', async () => {
+    const newUser = {
+      username: 'validuser',
+      name: 'User',
+      password: '12'
+    };
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(400);
+
+    assert.match(result.body.error, /password must be at least 3 characters/i);
+
+    const usersAtEnd = await api.get('/api/users');
+    assert.strictEqual(usersAtEnd.body.length, 1);
+  });
+
+  test('creation fails if username already exists', async () => {
+    const newUser = {
+      username: 'root',
+      name: 'Duplicate',
+      password: 'validpass'
+    };
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(400);
+
+    assert.match(result.body.error, /username.*unique/i);
+
+    const usersAtEnd = await api.get('/api/users');
+    assert.strictEqual(usersAtEnd.body.length, 1);
+  });
 });
 
 after(async () => {
