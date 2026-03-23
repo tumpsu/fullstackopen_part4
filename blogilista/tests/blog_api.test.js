@@ -125,6 +125,33 @@ test('if likes is missing, it defaults to 0', async () => {
   assert.strictEqual(response.body.likes, 0);
 });
 
+describe('DELETE /api/blogs/:id', () => {
+  let blogId;
+
+  beforeEach(async () => {
+    await Blog.deleteMany({});;
+
+    const blog = new Blog({
+      title: 'Blog to delete',
+      author: 'Tester',
+      url: 'http://example.com',
+      likes: 1
+    });
+
+    const saved = await blog.save();
+    blogId = saved.id;
+  });
+
+  test('a blog can be deleted', async () => {
+    await api
+      .delete(`/api/blogs/${blogId}`)
+      .expect(204);
+
+    const blogsAfter = await api.get('/api/blogs');
+    assert.strictEqual(blogsAfter.body.length, 0);
+  });
+});
+
 after(async () => {
   await mongoose.connection.close();
 });
