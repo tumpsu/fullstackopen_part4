@@ -34,7 +34,7 @@ loginRouter.post('/', async (req, res) => {
     token,
     username: user.username,
     name: user.name
-  })
-})
+  });
+});
 
-module.exports = loginRouter
+module.exports = loginRouter;
