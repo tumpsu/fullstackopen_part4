@@ -12,7 +12,6 @@ blogsRouter.get('/', async (req, res) => {
 blogsRouter.post('/', async (req, res) => {
   try
   {
-    const body = req.body;
     if (!req.token)
     {
       return res.status(401).json({ error: 'token missing' });
@@ -26,6 +25,7 @@ blogsRouter.post('/', async (req, res) => {
     {
       return res.status(401).json({ error: 'token invalid' });
     }
+
     if (!decodedToken.id)
     {
       return res.status(401).json({ error: 'token invalid' });
@@ -37,12 +37,13 @@ blogsRouter.post('/', async (req, res) => {
       return res.status(400).json({ error: 'no users in database' });
     }
     const blog = new Blog({
-      title: body.title,
-      author: body.author,
-      url: body.url,
-      likes: body.likes,
+      title: req.body.title,
+      author: req.body.author,
+      url: req.body.url,
+      likes: req.body.likes,
       user: user._id
     });
+
     const savedBlog = await blog.save();
 
     user.blogs = user.blogs.concat(savedBlog._id);
