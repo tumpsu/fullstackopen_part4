@@ -1,7 +1,5 @@
 const blogsRouter = require('express').Router();
 const Blog = require('../models/blog');
-const User = require('../models/user');
-const jwt = require('jsonwebtoken');
 
 blogsRouter.get('/', async (req, res) => {
   const blogs = await Blog.find({})
@@ -12,35 +10,13 @@ blogsRouter.get('/', async (req, res) => {
 blogsRouter.post('/', async (req, res) => {
   try
   {
-    if (!req.token)
-    {
-      return res.status(401).json({ error: 'token missing' });
-    }
-    let decodedToken;
-    try
-    {
-      decodedToken = jwt.verify(req.token, process.env.SECRET);
-    }
-    catch
-    {
-      return res.status(401).json({ error: 'token invalid' });
-    }
-
-    if (!decodedToken.id)
-    {
-      return res.status(401).json({ error: 'token invalid' });
-    }
-
-    const user = await User.findById(decodedToken.id);
-    if (user.length === 0)
-    {
-      return res.status(400).json({ error: 'no users in database' });
-    }
+    const user = req.user;
+    const body = req.body;
     const blog = new Blog({
-      title: req.body.title,
-      author: req.body.author,
-      url: req.body.url,
-      likes: req.body.likes,
+      title: body.title,
+      author: body.author,
+      url: body.url,
+      likes: body.likes,
       user: user._id
     });
 
@@ -57,26 +33,7 @@ blogsRouter.post('/', async (req, res) => {
 });
 
 blogsRouter.delete('/:id', async (req, res) => {
-  if (!req.token)
-  {
-    return res.status(401).json({ error: 'token missing' });
-  }
-  let decodedToken;
-  try
-  {
-    decodedToken = jwt.verify(req.token, process.env.SECRET);
-  }
-  catch
-  {
-    return res.status(401).json({ error: 'token invalid' });
-  }
-
-  if (!decodedToken)
-  {
-    return res.status(401).json({ error: 'token missing' });
-  }
-
-  const userId = decodedToken.id;
+  const user = req.user;
   const blog = await Blog.findById(req.params.id);
 
   if (!blog)
@@ -84,13 +41,12 @@ blogsRouter.delete('/:id', async (req, res) => {
     return res.status(404).json({ error: 'blog not found' });
   }
 
-  if (blog.user.toString() !== userId.toString())
+  if (blog.user.toString() !== user._id.toString())
   {
     return res.status(403).json({ error: 'only the creator can delete this blog' });
   }
 
   await Blog.findByIdAndDelete(req.params.id);
-
   res.status(204).end();
 });
 
