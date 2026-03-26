@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const logger = require('./logger');
 
+
 const requestLogger = (req, res, next) => {
   logger.info(`${req.method} ${req.path} ${JSON.stringify(req.body)}`);
   next();
@@ -35,7 +36,7 @@ const userExtractor = async (request, response, next) => {
   if (!token)
   {
     request.user = null;
-    return response.status(401).json({ error: 'token missing' });
+    return next();
   }
 
   let decodedToken;

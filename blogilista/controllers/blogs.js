@@ -1,5 +1,6 @@
 const blogsRouter = require('express').Router();
 const Blog = require('../models/blog');
+const middleware = require('../utils/middleware');
 
 blogsRouter.get('/', async (req, res) => {
   const blogs = await Blog.find({})
@@ -7,11 +8,15 @@ blogsRouter.get('/', async (req, res) => {
   res.json(blogs);
 });
 
-blogsRouter.post('/', async (req, res) => {
+blogsRouter.post('/', middleware.userExtractor, async (req, res) => {
   try
   {
     const user = req.user;
     const body = req.body;
+    if (!req.user)
+    {
+      return res.status(401).json({ error: 'token missing or invalid' });
+    }
     const blog = new Blog({
       title: body.title,
       author: body.author,
@@ -32,13 +37,24 @@ blogsRouter.post('/', async (req, res) => {
   }
 });
 
-blogsRouter.delete('/:id', async (req, res) => {
+blogsRouter.delete('/:id', middleware.userExtractor, async (req, res) => {
   const user = req.user;
+
+  if (!user)
+  {
+    return res.status(401).json({ error: 'token missing or invalid' });
+  }
+
   const blog = await Blog.findById(req.params.id);
 
   if (!blog)
   {
     return res.status(404).json({ error: 'blog not found' });
+  }
+
+  if (!blog.user)
+  {
+    return res.status(400).json({ error: 'blog has no user field' });
   }
 
   if (blog.user.toString() !== user._id.toString())
@@ -47,7 +63,6 @@ blogsRouter.delete('/:id', async (req, res) => {
   }
 
   await Blog.findByIdAndDelete(req.params.id);
-  res.status(204).end();
 });
 
 blogsRouter.put('/:id', async (req, res) => {

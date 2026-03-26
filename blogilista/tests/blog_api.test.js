@@ -5,11 +5,42 @@ const mongoose = require('mongoose');
 const config = require('../utils/config');
 const app = require('../app');
 const Blog = require('../models/blog');
+const User = require('../models/user');
+const bcrypt = require('bcryptjs');
 
 const api = supertest(app);
 
 before(async () => {
   await mongoose.connect(config.MONGODB_URI);
+});
+
+beforeEach(async () => {
+  await User.deleteMany({});
+  const passwordHash = bcrypt.hashSync('sekret', 10);
+  const user = new User({ username: 'root', passwordHash });
+  await user.save();
+});
+
+// Helper: login and get token
+const loginAndGetToken = async () => {
+  const loginResponse = await api
+    .post('/api/login')
+    .send({ username: 'root', password: 'sekret' });
+
+  return loginResponse.body.token;
+};
+
+// Ensure test user exists
+before(async () => {
+  await User.deleteMany({});
+
+  const user = new User({
+    username: 'root',
+    name: 'Superuser',
+    passwordHash: '$2a$10$eImiTXuWVxfM37uY4JANjQeWf1jH0I1GtIsfRSAxEPPYU.GFQ/92.' // bcrypt('sekret')
+  });
+
+  await user.save();
 });
 
 describe('GET /api/blogs', () => {
@@ -61,7 +92,9 @@ describe('POST /api/blogs', () => {
     await initialBlog.save();
   });
 
-  test('a valid blog can be added', async () => {
+  test('a valid blog can be added with a valid token', async () => {
+    const token = await loginAndGetToken();
+
     const newBlog = {
       title: 'New blog',
       author: 'Author',
@@ -71,6 +104,7 @@ describe('POST /api/blogs', () => {
 
     await api
       .post('/api/blogs')
+      .set('Authorization', `Bearer ${token}`)
       .send(newBlog)
       .expect(201)
       .expect('Content-Type', /application\/json/);
@@ -82,7 +116,28 @@ describe('POST /api/blogs', () => {
     assert.ok(titles.includes('New blog'));
   });
 
+  test('adding a blog fails with 401 if token is missing', async () => {
+    const newBlog = {
+      title: 'Unauthorized blog',
+      author: 'Hacker',
+      url: 'https://example.com',
+      likes: 1
+    };
+
+    const result = await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(401);
+
+    assert.match(result.body.error, /token missing/i);
+
+    const blogsAtEnd = await api.get('/api/blogs');
+    assert.strictEqual(blogsAtEnd.body.length, 1);
+  });
+
   test('blog without title is not added', async () => {
+    const token = await loginAndGetToken();
+
     const newBlog = {
       author: 'Author',
       url: 'http://example.com',
@@ -91,11 +146,14 @@ describe('POST /api/blogs', () => {
 
     await api
       .post('/api/blogs')
+      .set('Authorization', `Bearer ${token}`)
       .send(newBlog)
       .expect(400);
   });
 
   test('blog without url is not added', async () => {
+    const token = await loginAndGetToken();
+
     const newBlog = {
       title: 'Missing URL',
       author: 'Author',
@@ -104,12 +162,15 @@ describe('POST /api/blogs', () => {
 
     await api
       .post('/api/blogs')
+      .set('Authorization', `Bearer ${token}`)
       .send(newBlog)
       .expect(400);
   });
 });
 
 test('if likes is missing, it defaults to 0', async () => {
+  const token = await loginAndGetToken();
+
   const newBlog = {
     title: 'Blog without likes',
     author: 'Author',
@@ -118,6 +179,7 @@ test('if likes is missing, it defaults to 0', async () => {
 
   const response = await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${token}`)
     .send(newBlog)
     .expect(201)
     .expect('Content-Type', /application\/json/);
@@ -127,24 +189,29 @@ test('if likes is missing, it defaults to 0', async () => {
 
 describe('DELETE /api/blogs/:id', () => {
   let blogId;
+  let token;
 
   beforeEach(async () => {
-    await Blog.deleteMany({});;
+    await Blog.deleteMany({});
+    token = await loginAndGetToken();
 
-    const blog = new Blog({
-      title: 'Blog to delete',
-      author: 'Tester',
-      url: 'http://example.com',
-      likes: 1
-    });
+    const blog = await api
+      .post('/api/blogs')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Blog to delete',
+        author: 'Tester',
+        url: 'http://example.com',
+        likes: 1
+      });
 
-    const saved = await blog.save();
-    blogId = saved.id;
+    blogId = blog.body.id;
   });
 
-  test('a blog can be deleted', async () => {
+  test('a blog can be deleted by its creator', async () => {
     await api
       .delete(`/api/blogs/${blogId}`)
+      .set('Authorization', `Bearer ${token}`)
       .expect(204);
 
     const blogsAfter = await api.get('/api/blogs');
